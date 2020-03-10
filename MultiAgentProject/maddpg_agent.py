@@ -92,8 +92,8 @@ class Agent():
         states, actions, rewards, next_states, dones, experience_idx = experiences
 
         # ---------------------------- update critic ---------------------------- #
-        Q_vals = self.get_Q_loss(states, actions, rewards, next_states, dones, agent_number)      
-        critic_loss = F.mse_loss(Q_vals[0], Q_vals[1])
+        Q_expected, Q_targets = self.get_Q_loss(states, actions, rewards, next_states, dones, agent_number)      
+        critic_loss = F.mse_loss(Q_expected, Q_targets)
         
         # Minimize the loss
         self.critic_optimizer.zero_grad()
@@ -102,10 +102,8 @@ class Agent():
         self.critic_optimizer.step()
         
         # update priorities based on new Q values
-
-        # TODO - return without using tuple
-        Q_expected = Q_vals[0].detach().numpy()
-        Q_targets = Q_vals[1].detach().numpy()
+        Q_expected = Q_expected.detach().numpy()
+        Q_targets = Q_targets.detach().numpy()
         for i in range(len(experience_idx)):
             self.buffer.memory[experience_idx[i]]._replace(priority = (abs(Q_expected[i]-Q_targets[i])+h.PRIORITY_EPS)**h.PRIORITY_ALPHA)
 
@@ -148,7 +146,7 @@ class Agent():
         Q_targets = rewards + (h.GAMMA * Q_targets_next * (1 - dones))
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
-        return (Q_expected, Q_targets)
+        return Q_expected, Q_targets
         
     
     def soft_update(self, local_model, target_model, tau):
