@@ -48,13 +48,16 @@ class Agent():
         self.noise = OUNoise((num_agents, action_size))
 
         # Replay memory
-        self.memory = replay_buffer
+        self.buffer = replay_buffer
 
     def step(self, state, action, reward, next_state, done, agent_number):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         self.timestep += 1
-        # Save experience / reward
-        self.memory.add(state, action, reward, next_state, done)
+        
+        # Save experience / reward, initializing the priority using reward as error
+        priority = (abs(reward) + h.PRIORITY_EPS)**h.PRIORITY_ALPHA
+        
+        self.buffer.add(state, action, reward, next_state, done, priority)
 
     def act(self, states, add_noise):
         """Returns actions for both agents as per current policy, given their respective states."""
@@ -84,19 +87,27 @@ class Agent():
             critic_target(state, action) -> Q-value
         Params
         ======
-            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples
+            experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done, experience indices) tuples
         """
-        states, actions, rewards, next_states, dones = experiences
+        states, actions, rewards, next_states, dones, experience_idx = experiences
 
         # ---------------------------- update critic ---------------------------- #
-        critic_loss = self.get_critic_loss(states, actions, rewards, next_states, dones, agent_number)
-        
+        Q_vals = self.get_Q_loss(states, actions, rewards, next_states, dones, agent_number)      
+        critic_loss = F.mse_loss(Q_vals[0], Q_vals[1])
         
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(), 1)
         self.critic_optimizer.step()
+        
+        # update priorities based on new Q values
+
+        # TODO - return without using tuple
+        Q_expected = Q_vals[0].detach().numpy()
+        Q_targets = Q_vals[1].detach().numpy()
+        for i in range(len(experience_idx)):
+            self.buffer.memory[experience_idx[i]]._replace(priority = (abs(Q_expected[i]-Q_targets[i])+h.PRIORITY_EPS)**h.PRIORITY_ALPHA)
 
         # ---------------------------- update actor ---------------------------- #
         # Compute actor loss
@@ -123,8 +134,8 @@ class Agent():
         self.eps *= self.eps_decay
     
         self.noise.reset()
-
-    def get_critic_loss(self, states, actions, rewards, next_states, dones, agent_number):
+    
+    def get_Q_loss(self, states, actions, rewards, next_states, dones, agent_number):
         # Get predicted next-state actions and Q values from target models
         actions_next = self.actor_target(next_states)
         # Construct next actions vector relative to the agent
@@ -137,9 +148,9 @@ class Agent():
         Q_targets = rewards + (h.GAMMA * Q_targets_next * (1 - dones))
         # Compute critic loss
         Q_expected = self.critic_local(states, actions)
-        critic_loss = F.mse_loss(Q_expected, Q_targets)
-        return critic_loss              
+        return (Q_expected, Q_targets)
         
+    
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target

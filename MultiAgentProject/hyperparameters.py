@@ -18,7 +18,10 @@ OU_THETA = 0.15         # Ornstein-Uhlenbeck noise parameter, speed of mean reve
 BUFFER_SIZE = int(1e6)  # replay buffer size
 BATCH_SIZE = 128        # minibatch size
 LEARN_EVERY = 1         # learning timestep interval
-LEARN_NUM = 10           # number of learning passes per call
+LEARN_NUM = 5           # number of learning passes per call
 GAMMA = 0.99            # discount factor
 
-SEED = 301
+PRIORITY_EPS = 0.01     # small factor to ensure that no experience has zero sample probability
+PRIORITY_ALPHA = 0.5    # [0, 1] how much to prioritize replay of high-error experiences
+
+SEED = 305
