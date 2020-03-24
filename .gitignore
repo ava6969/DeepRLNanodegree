@@ -1,2 +1,3 @@
 # ignoring docx versions of reports (PDFs are uploaded)
 *.docx
+*.tmp
