@@ -1,3 +1,5 @@
+# code adapted from the Continuous Control project, which in turn was adapted from the ddpg_agent in the Finance exercise
+
 import numpy as np
 import random
 import copy
