@@ -30,7 +30,7 @@ class Agent():
         self.num_agents = num_agents
         self.seed = random.seed(random_seed)
         self.eps = h.EPS_START
-        self.eps_decay = 1/(h.EPS_EP_END*h.LEARN_PASSES)  # set decay rate based on epsilon end target
+        self.eps_decay = 1/(h.EPS_EP_END*h.LEARN_PASSES)
         self.timestep = 0
 
         # Actor Network (w/ Target Network)
@@ -52,15 +52,11 @@ class Agent():
     def step(self, state, action, reward, next_state, done, agent_number):
         """Save experience in replay memory, and use random sample from buffer to learn."""
         self.timestep += 1
-        # Save experience / reward - no priority
-#         self.memory.add(state, action, reward, next_state, done)
 
         # Save experience / reward, initializing the priority using reward as error
         priority = (abs(reward) + h.PRIORITY_EPS)**h.PRIORITY_ALPHA        
         self.memory.add(state, action, reward, next_state, done, priority)       
         
-        
-
         # Learn, if enough samples are available in memory and at learning interval settings
         if len(self.memory) > h.BATCH_SIZE and self.timestep % h.LEARN_EVERY == 0:
                 for _ in range(h.LEARN_PASSES):
@@ -207,10 +203,7 @@ class ReplayBuffer:
         self.memory.append(e)
 
     def sample(self):
-        """Randomly sample a batch of experiences from memory."""
-#         experiences = random.sample(self.memory, k=self.batch_size)
-
-        """Use priority to resample"""
+        """Use priority to resample probablistically resample, weighted towards cases with higher error"""
         # get priorities
         priorities = [self.memory[i].priority for i in range(len(self))]
 
@@ -229,12 +222,6 @@ class ReplayBuffer:
                 experience_idx.append(i)
                 experiences.append(self.memory[i])
                 stopping_values.pop(0)
-
-
-
-
-
-
 
         states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
         actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).float().to(device)
