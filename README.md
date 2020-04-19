@@ -8,4 +8,4 @@ Train an agent to gather bananas in the Unity Banana Collector environment. Demo
 Train a robotic arm to follow a moving target region in space. Demonstrates the Deep Deterministic Policy Gradient Algorithm - an actor-critic method for continuous action spaces.
 
 ## Multi-Agent Reinforcement Learning
-TODO
+Train two agents to play a game of tennis in the Unity Tennis environment. Demonstrates DDPG with prioritized experience replay with multiple agents.
